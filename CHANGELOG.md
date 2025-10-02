@@ -13,6 +13,7 @@
 - Support for `CustomFunction.Create` with zero-parameter functions that have return values (`Func<TResult>`)
 - `AddCustomFunctionRange(IEnumerable<CustomFunction> functions)` method for adding multiple custom functions at once
 - Documentation clarification on function purity requirements
+- Test
 
 ### Fixed
 - **Unity Compatibility**: Added conditional compilation support for Unity's `UnsafeUtility.As` API in `TypeTraits.cs`
