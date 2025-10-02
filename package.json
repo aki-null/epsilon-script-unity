@@ -1,13 +1,22 @@
 {
     "name": "com.akinull.epsilonscript",
+    "version": "1.2.0",
     "displayName": "EpsilonScript",
-    "version": "1.1.0",
-    "unity": "2019.3",
     "description": "Typed math expression with variable assignment support for inline scripting.",
-    "keywords": [ "math", "expression", "variable", "scripting" ],
-    "category": "scripting",
-    "dependencies": {
+    "unity": "2019.3",
+    "license": "MIT",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/aki-null/epsilon-script-unity.git"
     },
-    "samples": [
+    "author": {
+        "name": "Akihiro Noguchi",
+        "url": "https://github.com/aki-null"
+    },
+    "keywords": [
+        "math",
+        "scripting",
+        "expression",
+        "interpreter"
     ]
 }
