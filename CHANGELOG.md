@@ -1,5 +1,35 @@
 # Changelog
 
+## [2.0.0] - 2025-10-31
+
+### Added
+- **Contextual Custom Functions**: Functions can read variables from execution environment without explicit parameters
+  - `CustomFunction.CreateContextual()` factory methods for context-aware functions
+  - Supports up to 3 context variables and 3 script parameters
+
+### Changed
+- **BREAKING CHANGE**: `CustomFunction.Create()` parameter renamed from `isConstant` to `isDeterministic`
+  - `CustomFunction.IsConstant` property renamed to `IsDeterministic`
+- **BREAKING CHANGE**: `CompiledScript.IsConstant` property renamed to `IsPrecomputable`
+- **BREAKING CHANGE - Parser Validation**: Syntax errors now detected earlier during compilation
+  - Adjacent values without operators (e.g., `1 2`, `x y`)
+  - Trailing and leading operators (e.g., `1 +`, `+ 1`)
+  - Mismatched parentheses (e.g., `(1`)
+  - Empty grouping parentheses `()` (function calls `func()` remain valid)
+  - Invalid assignment targets (e.g., `1 = 2`)
+  - **Impact**: Invalid assignments (e.g., `1 = 2`) now throw `ParserException` during compilation instead of `RuntimeException` during execution
+- **BREAKING CHANGE**: `VariableValue.IntegerValue/LongValue` now throws `InvalidCastException` for NaN or Infinity
+  - Previously returned `0`
+- **BREAKING CHANGE**: Boolean `VariableValue` can now be read as float/double/decimal types
+  - `true` converts to `1.0`, `false` converts to `0.0` (matching integer conversion behavior)
+- **Error Messages**: Improved error message clarity
+- **Function Resolution Caching**: Function overload lookups cached per execution for improved performance
+- **Multiply-Add Optimization**: Improved performance for expressions matching patterns `(a*b)±c` and `c±(a*b)`
+
+### Fixed
+- **Type Enum Serialization Compatibility**: Restored pre-1.3.0 enum indices for Integer/Float/Boolean/String
+  - Version 1.3.0 broke serialization by reordering existing types
+
 ## [1.3.0] - 2025-10-07
 
 ### Added
@@ -90,5 +120,8 @@ Most existing code using `uint` variable identifiers will continue to work due t
 - ArithmeticNode provides specific error messages for boolean arithmetic operations
 - ArithmeticNode provides specific error messages for unsupported string operations
 
-## [1.0.0]
+## [1.0.0] - 2022-11-08
 - Initial stable release
+
+## [0.1.0] - 2020-03-06
+- Beta release

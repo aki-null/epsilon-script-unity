@@ -13,7 +13,7 @@ namespace EpsilonScript.AST
     private Type _configuredIntegerType;
     private Type _configuredFloatType;
 
-    public override bool IsConstant => _leftNode.IsConstant && _rightNode.IsConstant;
+    public override bool IsPrecomputable => _leftNode.IsPrecomputable && _rightNode.IsPrecomputable;
 
     private static string GetOperatorName(ElementType op)
     {
@@ -196,15 +196,71 @@ namespace EpsilonScript.AST
 
     public override Node Optimize()
     {
-      if (IsConstant)
+      if (IsPrecomputable)
       {
         Execute(null);
         return CreateValueNode();
       }
 
-      _leftNode = _leftNode.Optimize();
-      _rightNode = _rightNode.Optimize();
-      return this;
+      switch (_operator)
+      {
+        // Try Multiply-Add optimization for addition operations
+        // Pattern: (a * b) + c
+        case ElementType.AddOperator when _leftNode is ArithmeticNode
+        {
+          _operator: ElementType.MultiplyOperator
+        } left:
+          return new MultiplyAddNode(
+            left._leftNode,
+            left._rightNode,
+            _rightNode,
+            _configuredIntegerType,
+            _configuredFloatType,
+            MultiplyAddNode.OperationMode.MultiplyAdd
+          ).Optimize();
+        // Pattern: c + (a * b)
+        case ElementType.AddOperator when _rightNode is ArithmeticNode
+        {
+          _operator: ElementType.MultiplyOperator
+        } right:
+          return new MultiplyAddNode(
+            right._leftNode,
+            right._rightNode,
+            _leftNode,
+            _configuredIntegerType,
+            _configuredFloatType,
+            MultiplyAddNode.OperationMode.AddMultiply
+          ).Optimize();
+        // Try Multiply-Subtract optimization for subtraction operations
+        // Pattern: (a * b) - c
+        case ElementType.SubtractOperator when _leftNode is ArithmeticNode
+        {
+          _operator: ElementType.MultiplyOperator
+        } left:
+          return new MultiplyAddNode(
+            left._leftNode,
+            left._rightNode,
+            _rightNode,
+            _configuredIntegerType,
+            _configuredFloatType,
+            MultiplyAddNode.OperationMode.MultiplySubtract
+          ).Optimize();
+        // Pattern: c - (a * b)
+        case ElementType.SubtractOperator when _rightNode is ArithmeticNode
+        {
+          _operator: ElementType.MultiplyOperator
+        } right:
+          return new MultiplyAddNode(
+            right._leftNode,
+            right._rightNode,
+            _leftNode,
+            _configuredIntegerType,
+            _configuredFloatType,
+            MultiplyAddNode.OperationMode.SubtractMultiply
+          ).Optimize();
+        default:
+          return this;
+      }
     }
   }
 }
