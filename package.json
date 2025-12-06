@@ -1,6 +1,6 @@
 {
   "name": "com.akinull.epsilonscript",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "displayName": "EpsilonScript",
   "description": "Typed math expression with variable assignment support for inline scripting.",
   "unity": "2019.3",

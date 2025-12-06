@@ -6,13 +6,34 @@ using EpsilonScript.Parser;
 
 namespace EpsilonScript
 {
+  /// <summary>
+  /// Compiles EpsilonScript source code into executable scripts.
+  /// </summary>
+  /// <remarks>
+  /// Thread Safety: NOT thread-safe. Each thread must create its own Compiler instance.
+  /// </remarks>
   public class Compiler
   {
+    /// <summary>
+    /// Compiler options that control script compilation behavior.
+    /// These flags can be combined using bitwise OR operations.
+    /// </summary>
     [Flags]
     public enum Options : short
     {
+      /// <summary>No options enabled (default).</summary>
       None = 0,
-      Immutable = 1,
+
+      /// <summary>
+      /// Prevents variable assignments. Scripts become immutable expressions.
+      /// </summary>
+      Immutable = 1 << 0,
+
+      /// <summary>
+      /// Blocks runtime heap allocations (string allocations).
+      /// Compile-time constants are optimized and allowed.
+      /// </summary>
+      NoAlloc = 1 << 1,
     }
 
     public enum IntegerPrecision
@@ -50,7 +71,9 @@ namespace EpsilonScript
       // Register built-in functions with appropriate precision
       RegisterBuiltInFunctions();
 
-      _astBuilder = new AstBuilder(_functions);
+      var context =
+        new CompilerContext(integerPrecision, floatPrecision, _functions);
+      _astBuilder = new AstBuilder(context);
       _rpnConverter = new RpnConverter(_astBuilder);
       _tokenParser = new TokenParser(_rpnConverter);
     }
@@ -206,11 +229,20 @@ namespace EpsilonScript
       _rpnConverter.Reset();
       _tokenParser.Reset();
 
-      _astBuilder.Configure(options, variables, DefaultIntegerType, DefaultFloatType);
+      _astBuilder.Configure(options, variables);
 
       new Lexer.Lexer().Execute(source, _tokenParser);
       var rootNode = _astBuilder.Result;
       rootNode = rootNode.Optimize();
+
+      // Validate AST after optimization (when types are resolved for constant expressions)
+      rootNode.Validate();
+
+      // Configure NoAlloc validation after optimization completes
+      if ((options & Options.NoAlloc) == Options.NoAlloc)
+      {
+        rootNode.ConfigureNoAlloc();
+      }
 
       _astBuilder.Reset();
       _rpnConverter.Reset();
@@ -226,7 +258,7 @@ namespace EpsilonScript
       }
       else
       {
-        _functions[func.Name] = new CustomFunctionOverload(func, DefaultFloatType);
+        _functions[func.Name] = new CustomFunctionOverload(func, DefaultIntegerType, DefaultFloatType);
       }
     }
 

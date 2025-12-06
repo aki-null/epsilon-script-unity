@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 
 namespace EpsilonScript.Function
@@ -76,6 +77,34 @@ namespace EpsilonScript.Function
     public static bool operator !=(PackedParameterTypes left, PackedParameterTypes right)
     {
       return left._packed != right._packed;
+    }
+
+    public override string ToString()
+    {
+      if (Count == 0) return string.Empty;
+
+      var types = new string[Count];
+      for (var i = 0; i < Count; i++)
+      {
+        types[i] = GetTypeAt(i).ToDebugString();
+      }
+
+      return string.Join(", ", types);
+    }
+  }
+
+  internal sealed class PackedParameterTypesComparer : IEqualityComparer<PackedParameterTypes>
+  {
+    public static readonly PackedParameterTypesComparer Instance = new PackedParameterTypesComparer();
+
+    public bool Equals(PackedParameterTypes x, PackedParameterTypes y)
+    {
+      return x.Equals(y);
+    }
+
+    public int GetHashCode(PackedParameterTypes obj)
+    {
+      return obj.GetHashCode();
     }
   }
 }

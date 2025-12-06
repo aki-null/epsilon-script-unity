@@ -6,7 +6,7 @@ using EpsilonScript.Intermediate;
 
 namespace EpsilonScript.AST
 {
-  internal class FunctionNode : Node
+  internal sealed class FunctionNode : Node
   {
     public override bool IsPrecomputable => _functionOverload.IsDeterministic && AreParametersPrecomputable;
 
@@ -17,6 +17,7 @@ namespace EpsilonScript.AST
     // Cache resolved function using packed types for fast comparison
     private CustomFunction _cachedFunction;
     private PackedParameterTypes _cachedPackedTypes;
+    private int _cachedVersion;
 
     private bool AreParametersPrecomputable
     {
@@ -34,9 +35,8 @@ namespace EpsilonScript.AST
       }
     }
 
-    public override void Build(Stack<Node> rpnStack, Element element, Compiler.Options options,
-      IVariableContainer variables, IDictionary<VariableId, CustomFunctionOverload> functions,
-      Compiler.IntegerPrecision intPrecision, Compiler.FloatPrecision floatPrecision)
+    protected override void BuildCore(Stack<Node> rpnStack, Element element, CompilerContext context,
+      Compiler.Options options, IVariableContainer variables)
     {
       // Unfortunately function name string needs to be allocated here to make a dictionary lookup
       VariableId functionName = element.Token.Text.ToString();
@@ -44,7 +44,7 @@ namespace EpsilonScript.AST
       // Store compile-time variables for contextual functions
       _variables = variables;
 
-      if (!functions.TryGetValue(functionName, out _functionOverload))
+      if (!context.Functions.TryGetValue(functionName, out _functionOverload))
       {
         throw new ParserException(element.Token, $"Undefined function: {functionName}");
       }
@@ -87,9 +87,8 @@ namespace EpsilonScript.AST
       }
 
       // Fast path: Check cache for previously resolved function
-      if (_cachedFunction != null && _cachedPackedTypes == packedTypes)
+      if (_cachedFunction != null && _cachedPackedTypes == packedTypes && _cachedVersion == _functionOverload.Version)
       {
-        // Use cached function
         ExecuteFunction(variablesOverride);
         return;
       }
@@ -98,15 +97,14 @@ namespace EpsilonScript.AST
       var function = _functionOverload.Find(packedTypes);
       if (function == null)
       {
-        throw new RuntimeException("A function with given type signature is undefined");
+        throw CreateRuntimeException(CreateFunctionErrorMessage(packedTypes));
       }
 
-      ValueType = (ExtendedType)function.ReturnType;
-
-      // Cache resolved function for next execution
+      // Cache resolved function for performance
       _cachedFunction = function;
       _cachedPackedTypes = packedTypes;
-
+      _cachedVersion = _functionOverload.Version;
+      ValueType = (ExtendedType)function.ReturnType;
       ExecuteFunction(variablesOverride);
     }
 
@@ -151,7 +149,8 @@ namespace EpsilonScript.AST
           BooleanValue = _cachedFunction.ExecuteBool(_parameters);
           break;
         default:
-          throw new ArgumentOutOfRangeException(nameof(ValueType), ValueType, "Unsupported function return type");
+          throw new ArgumentOutOfRangeException(nameof(ValueType), ValueType,
+            $"Unsupported return type for function: {_cachedFunction.Name}");
       }
     }
 
@@ -184,7 +183,8 @@ namespace EpsilonScript.AST
           BooleanValue = _cachedFunction.ExecuteBool(context, _parameters);
           break;
         default:
-          throw new ArgumentOutOfRangeException(nameof(ValueType), ValueType, "Unsupported function return type");
+          throw new ArgumentOutOfRangeException(nameof(ValueType), ValueType,
+            $"Unsupported return type for function: {_cachedFunction.Name}");
       }
     }
 
@@ -204,6 +204,67 @@ namespace EpsilonScript.AST
       }
 
       return this;
+    }
+
+    public override void Validate()
+    {
+      // First, recursively validate all parameter nodes
+      if (_parameters != null)
+      {
+        foreach (var param in _parameters)
+        {
+          param?.Validate();
+        }
+      }
+
+      // Then validate this function's signature if possible
+      ValidateSignature();
+    }
+
+    private void ValidateSignature()
+    {
+      // Build packed types
+      var packedTypes = new PackedParameterTypes();
+      foreach (var param in _parameters)
+      {
+        packedTypes.AddType(param.ValueType);
+      }
+
+      // Returns a function (exact or candidate) if match possible, null if validation fails
+      var function = _functionOverload.Find(packedTypes);
+
+      if (function != null)
+      {
+        // Match found - cache it (might be exact match or first candidate with Undefined params)
+        _cachedFunction = function;
+        _cachedPackedTypes = packedTypes;
+        _cachedVersion = _functionOverload.Version;
+        ValueType = (ExtendedType)function.ReturnType;
+      }
+      else
+      {
+        // No match possible - validation failed
+        throw new ParserException(Location, CreateFunctionErrorMessage(packedTypes));
+      }
+    }
+
+    private string CreateFunctionErrorMessage(PackedParameterTypes packedTypes)
+    {
+      var availableOverloads = _functionOverload.GetAllOverloads();
+      var overloadList = string.Join(", ", availableOverloads);
+      var message = $"No overload of function '{_functionOverload.Name}' matches parameter types: ({packedTypes}).\n" +
+                    $"Available overloads: {overloadList}";
+      return message;
+    }
+
+    public override void ConfigureNoAlloc()
+    {
+      if (_parameters == null) return;
+
+      foreach (var param in _parameters)
+      {
+        param?.ConfigureNoAlloc();
+      }
     }
   }
 }

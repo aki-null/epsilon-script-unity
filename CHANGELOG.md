@@ -1,5 +1,42 @@
 # Changelog
 
+## [2.1.0] - 2025-12-06
+
+### Added
+- **NoAlloc Compiler Option**: Blocks runtime heap allocations
+  - `Compiler.Options.NoAlloc` flag throws `RuntimeException` for string concatenation and `ToString()` calls
+  - Compile-time constants are optimized away and allowed
+- **Single Quote String Literals**: String literals can now use single quotes (`'...'`) in addition to double quotes (`"..."`)
+  - Both quote styles are semantically identical
+- **Modulo Assignment Operator**: Added `%=` compound assignment operator for numeric types
+- **Compile-Time Function Signature Validation**: Function calls now validated earlier with better error detection
+  - Constant expressions fully validated: `func("test", 2.0)` with signature `func(string, int)` now fails at compile time
+  - Variable expressions partially validated: catches wrong parameter count and concrete type mismatches
+    - `func(x)` fails when all overloads require 2+ parameters
+    - `func(2.0, x)` fails when no overload accepts float at position 0
+
+### Changed
+- **Exception Location Reporting**: All exceptions now include precise source location information
+  - Error messages include both line and column: `"Runtime error at line 1, column 9: message"`
+- **Custom Function Error Messages**: Improved clarity and debugging information
+  - Function calls that fail now show available overloads and parameter type mismatches
+- **Function Validation Timing**: Type mismatches in function calls with constant parameters now detected at compile time
+- **Custom Function Registration**: Functions with mismatched precision now rejected at registration with `ArgumentException`
+- **String Formatting**: Improved performance with reduced allocations
+- **Function Overload Caching**: Added caching for function overload lookups to improve performance
+
+### Fixed
+- **Comparison Validation**: Boolean vs String comparisons now properly rejected in both directions
+  - Previously `true == "hello"` incorrectly succeeded without throwing exception
+- **Function Overload Cache**: Cache now properly invalidates when overloads are added dynamically
+- **VariableValue String Conversion**: Fixed asymmetric getter/setter behavior
+  - StringValue getter now converts all types to string (previously returned `null`)
+  - Float/Double/Decimal setters now support String-typed variables (previously threw exception)
+  - All setters use InvariantCulture for culture-safe round-trip conversion
+- **Assignment Operators Divide/Modulo by Zero**: `/=` and `%=` now throw `DivideByZeroException` for all numeric types
+  - Previously only integer types threw; float/double/decimal returned Infinity or NaN
+  - Now consistent with regular `/` and `%` operators
+
 ## [2.0.0] - 2025-10-31
 
 ### Added

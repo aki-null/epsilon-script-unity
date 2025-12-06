@@ -1,10 +1,9 @@
 using System.Collections.Generic;
-using EpsilonScript.Function;
 using EpsilonScript.Intermediate;
 
 namespace EpsilonScript.AST
 {
-  internal class TupleNode : Node
+  internal sealed class TupleNode : Node
   {
     public override bool IsPrecomputable
     {
@@ -22,9 +21,8 @@ namespace EpsilonScript.AST
       }
     }
 
-    public override void Build(Stack<Node> rpnStack, Element element, Compiler.Options options,
-      IVariableContainer variables, IDictionary<VariableId, CustomFunctionOverload> functions,
-      Compiler.IntegerPrecision intPrecision, Compiler.FloatPrecision floatPrecision)
+    protected override void BuildCore(Stack<Node> rpnStack, Element element, CompilerContext context,
+      Compiler.Options options, IVariableContainer variables)
     {
       ValueType = ExtendedType.Tuple;
       TupleValue = new List<Node>();
@@ -66,6 +64,28 @@ namespace EpsilonScript.AST
       }
 
       return this;
+    }
+
+    public override void Validate()
+    {
+      if (TupleValue != null)
+      {
+        foreach (var child in TupleValue)
+        {
+          child?.Validate();
+        }
+      }
+    }
+
+    public override void ConfigureNoAlloc()
+    {
+      if (TupleValue != null)
+      {
+        foreach (var child in TupleValue)
+        {
+          child?.ConfigureNoAlloc();
+        }
+      }
     }
   }
 }

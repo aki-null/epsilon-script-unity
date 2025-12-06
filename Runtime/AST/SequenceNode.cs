@@ -1,10 +1,9 @@
 using System.Collections.Generic;
-using EpsilonScript.Function;
 using EpsilonScript.Intermediate;
 
 namespace EpsilonScript.AST
 {
-  internal class SequenceNode : Node
+  internal sealed class SequenceNode : Node
   {
     private Node _leftNode;
     private Node _rightNode;
@@ -13,9 +12,8 @@ namespace EpsilonScript.AST
     public override bool IsPrecomputable =>
       _isSingleNode ? _rightNode.IsPrecomputable : (_leftNode.IsPrecomputable && _rightNode.IsPrecomputable);
 
-    public override void Build(Stack<Node> rpnStack, Element element, Compiler.Options options,
-      IVariableContainer variables, IDictionary<VariableId, CustomFunctionOverload> functions,
-      Compiler.IntegerPrecision intPrecision, Compiler.FloatPrecision floatPrecision)
+    protected override void BuildCore(Stack<Node> rpnStack, Element element, CompilerContext context,
+      Compiler.Options options, IVariableContainer variables)
     {
       if (!rpnStack.TryPop(out _rightNode))
       {
@@ -91,6 +89,18 @@ namespace EpsilonScript.AST
       _leftNode = _leftNode.Optimize();
       _rightNode = _rightNode.Optimize();
       return this;
+    }
+
+    public override void Validate()
+    {
+      _leftNode?.Validate();
+      _rightNode?.Validate();
+    }
+
+    public override void ConfigureNoAlloc()
+    {
+      _leftNode?.ConfigureNoAlloc();
+      _rightNode?.ConfigureNoAlloc();
     }
   }
 }
