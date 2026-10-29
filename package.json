@@ -1,6 +1,6 @@
 {
   "name": "com.akinull.epsilonscript",
-  "version": "2.1.0",
+  "version": "2.2.0",
   "displayName": "EpsilonScript",
   "description": "Embeddable expression engine for C# with functions and allocation-free execution",
   "unity": "2021.3",
